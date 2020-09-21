@@ -2,7 +2,6 @@ package relay
 
 import (
 	"bytes"
-	"net/http"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -13,7 +12,6 @@ const (
 	retryMultiplier = 2
 )
 
-// Operation -TODO-
 type Operation func() error
 
 // Buffers and retries operations, if the buffer is full operations are dropped.
@@ -22,7 +20,6 @@ type Operation func() error
 // There is no delay between attempts of different operations.
 type retryBuffer struct {
 	buffering int32
-	flushing  int32
 
 	initialInterval time.Duration
 	multiplier      time.Duration
@@ -50,43 +47,24 @@ func newRetryBuffer(size, batch int, max time.Duration, p poster) *retryBuffer {
 	return r
 }
 
-type retryStats struct {
-	Buffering int64 `json:"buffering"`
-	MaxSize   int64 `json:"maxSize"`
-	Size      int64 `json:"size"`
-}
-
-func (r *retryBuffer) getStats() stats {
-	stats := retryStats{}
-	stats.Buffering = int64(r.buffering)
-	stats.MaxSize = int64(r.list.maxSize)
-	stats.Size = int64(r.list.size)
-	return stats
-}
-
-func (r *retryBuffer) post(buf []byte, query string, auth string, endpoint string) (*responseData, error) {
+func (r *retryBuffer) post(buf []byte, query string, auth string) (*responseData, error) {
 	if atomic.LoadInt32(&r.buffering) == 0 {
-		resp, err := r.p.post(buf, query, auth, endpoint)
-		// TODO: A 5xx caused by the point data could cause the relay to buffer forever
+		resp, err := r.p.post(buf, query, auth)
+		// TODO A 5xx caused by the point data could cause the relay to buffer forever
 		if err == nil && resp.StatusCode/100 != 5 {
 			return resp, err
 		}
-
 		atomic.StoreInt32(&r.buffering, 1)
 	}
 
 	// already buffering or failed request
-	batch, err := r.list.add(buf, query, auth, endpoint)
-
-	if batch != nil {
-		defer batch.wg.Wait()
+	batch, err := r.list.add(buf, query, auth)
+	if err != nil {
+		return nil, err
 	}
 
-	// We do not wait for the WaitGroup because we don't want
-	// to leave the connection open
-	// The client will receive a 204 which closes the connection and
-	// invites him to send further requests
-	return &responseData{StatusCode: http.StatusNoContent}, err
+	batch.wg.Wait()
+	return batch.resp, nil
 }
 
 func (r *retryBuffer) run() {
@@ -101,18 +79,7 @@ func (r *retryBuffer) run() {
 
 		interval := r.initialInterval
 		for {
-			if r.flushing == 1 {
-				atomic.StoreInt32(&r.buffering, 0)
-				batch.wg.Done()
-
-				if r.list.size == 0 {
-					atomic.StoreInt32(&r.flushing, 0)
-				}
-
-				break
-			}
-
-			resp, err := r.p.post(buf.Bytes(), batch.query, batch.auth, batch.endpoint)
+			resp, err := r.p.post(buf.Bytes(), batch.query, batch.auth)
 			if err == nil && resp.StatusCode/100 != 5 {
 				batch.resp = resp
 				atomic.StoreInt32(&r.buffering, 0)
@@ -133,12 +100,11 @@ func (r *retryBuffer) run() {
 }
 
 type batch struct {
-	query    string
-	auth     string
-	bufs     [][]byte
-	size     int
-	full     bool
-	endpoint string
+	query string
+	auth  string
+	bufs  [][]byte
+	size  int
+	full  bool
 
 	wg   sync.WaitGroup
 	resp *responseData
@@ -146,13 +112,12 @@ type batch struct {
 	next *batch
 }
 
-func newBatch(buf []byte, query string, auth string, endpoint string) *batch {
+func newBatch(buf []byte, query string, auth string) *batch {
 	b := new(batch)
 	b.bufs = [][]byte{buf}
 	b.size = len(buf)
 	b.query = query
 	b.auth = auth
-	b.endpoint = endpoint
 	b.wg.Add(1)
 	return b
 }
@@ -173,14 +138,6 @@ func newBufferList(maxSize, maxBatch int) *bufferList {
 	}
 }
 
-
-// Empty the buffer to drop any buffered query
-// This allows to flush 'impossible' queries which loop infinitely
-// without having to restart the whole relay
-func (r *retryBuffer) empty() {
-	atomic.StoreInt32(&r.flushing, 1)
-}
-
 // pop will remove and return the first element of the list, blocking if necessary
 func (l *bufferList) pop() *batch {
 	l.cond.L.Lock()
@@ -198,7 +155,7 @@ func (l *bufferList) pop() *batch {
 	return b
 }
 
-func (l *bufferList) add(buf []byte, query string, auth string, endpoint string) (*batch, error) {
+func (l *bufferList) add(buf []byte, query string, auth string) (*batch, error) {
 	l.cond.L.Lock()
 
 	if l.size+len(buf) > l.maxSize {
@@ -230,7 +187,7 @@ func (l *bufferList) add(buf []byte, query string, auth string, endpoint string)
 
 	if *cur == nil {
 		// new tail element
-		*cur = newBatch(buf, query, auth, endpoint)
+		*cur = newBatch(buf, query, auth)
 	} else {
 		// append to current batch
 		b := *cur
@@ -238,6 +195,6 @@ func (l *bufferList) add(buf []byte, query string, auth string, endpoint string)
 		b.bufs = append(b.bufs, buf)
 	}
 
-	defer l.cond.L.Unlock()
+	l.cond.L.Unlock()
 	return *cur, nil
 }

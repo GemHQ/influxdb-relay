@@ -9,9 +9,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/influxdata/influxdb/models"
-
-	"github.com/strike-team/influxdb-relay/config"
+	"github.com/influxdata/influxdb1-client/models"
 )
 
 const (
@@ -31,8 +29,7 @@ type UDP struct {
 	backends []*udpBackend
 }
 
-// NewUDP -TODO-
-func NewUDP(config config.UDPConfig) (Relay, error) {
+func NewUDP(config UDPConfig) (Relay, error) {
 	u := new(UDP)
 
 	u.name = config.Name
@@ -50,7 +47,7 @@ func NewUDP(config config.UDPConfig) (Relay, error) {
 	}
 
 	if config.ReadBuffer != 0 {
-		if err = ul.SetReadBuffer(config.ReadBuffer); err != nil {
+		if err := ul.SetReadBuffer(config.ReadBuffer); err != nil {
 			return nil, err
 		}
 	}
@@ -85,7 +82,6 @@ func NewUDP(config config.UDPConfig) (Relay, error) {
 	return u, nil
 }
 
-// Name -TODO-
 func (u *UDP) Name() string {
 	if u.name == "" {
 		return u.addr
@@ -114,7 +110,6 @@ type packet struct {
 	from      *net.UDPAddr
 }
 
-// Run -TODO-
 func (u *UDP) Run() error {
 
 	// buffer that can hold the largest possible UDP payload
@@ -132,7 +127,7 @@ func (u *UDP) Run() error {
 		}
 	}()
 
-	log.Printf("starting UDP relay %q on %v", u.Name(), u.l.LocalAddr())
+	log.Printf("Starting UDP relay %q on %v", u.Name(), u.l.LocalAddr())
 
 	for {
 		n, remote, err := u.l.ReadFromUDP(buf[:])
@@ -159,7 +154,6 @@ func (u *UDP) Run() error {
 	}
 }
 
-// Stop -TODO-
 func (u *UDP) Stop() error {
 	atomic.StoreInt64(&u.closing, 1)
 	return u.l.Close()
