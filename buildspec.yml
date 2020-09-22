@@ -27,6 +27,6 @@ phases:
       - docker push $LATEST_IMAGE
       - docker push $VERSIONED_IMAGE
       - echo Writing image definitions file...
-      - printf '[{"name":"influxdb-container","imageUri":"%s"}]' $LATEST_IMAGE > imagedefinitions.json
+      - printf '[{"name":"%s","imageUri":"%s"}]' $CONTAINER_NAME $LATEST_IMAGE > imagedefinitions.json
 artifacts:
   files: imagedefinitions.json
