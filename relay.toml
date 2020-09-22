@@ -1,0 +1,32 @@
+[[http]]
+# Name of the HTTP server, used for display purposes only.
+name = "gem-inlfuxdb-relay-http"
+
+# TCP address to bind to, for HTTP server.
+bind-addr = "0.0.0.0:9096"
+
+# Enable HTTPS requests.
+# ssl-combined-pem = "/etc/ssl/influxdb-relay.pem"
+
+# Array of InfluxDB instances to use as backends for Relay.
+output = [
+    { name="local1", location="http://influxdb.dev.us-west-2:8086/write", timeout="10s" }
+]
+
+[[udp]]
+# Name of the UDP server, used for display purposes only.
+name = "gem-inlfuxdb-relay-udp"
+
+# UDP address to bind to.
+bind-addr = "0.0.0.0:9096"
+
+# Socket buffer size for incoming connections.
+read-buffer = 0 # default
+
+# Precision to use for timestamps
+precision = "n" # Can be n, u, ms, s, m, h
+
+# Array of InfluxDB instances to use as backends for Relay.
+output = [
+    { name="local1", location="influxdb.dev.us-west-2:8089", mtu=512 }
+]
