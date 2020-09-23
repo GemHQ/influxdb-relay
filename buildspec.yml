@@ -14,6 +14,7 @@ phases:
       - IMAGE_TAG=${COMMIT_HASH:=latest}
       - VERSIONED_IMAGE=$REPOSITORY_URL:$IMAGE_TAG
       - LATEST_IMAGE=$REPOSITORY_URL:latest
+      - CONTAINER_NAME=$SERVICE_NAME-container
   build:
     commands:
       - echo Build started on `date`
