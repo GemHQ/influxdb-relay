@@ -3,7 +3,7 @@
 name = "gem-inlfuxdb-relay-http"
 
 # TCP address to bind to, for HTTP server.
-bind-addr = "0.0.0.0:9096"
+bind-addr = "0.0.0.0:8086"
 
 # Enable HTTPS requests.
 # ssl-combined-pem = "/etc/ssl/influxdb-relay.pem"
@@ -18,7 +18,7 @@ output = [
 name = "gem-inlfuxdb-relay-udp"
 
 # UDP address to bind to.
-bind-addr = "0.0.0.0:9096"
+bind-addr = "0.0.0.0:8086"
 
 # Socket buffer size for incoming connections.
 read-buffer = 0 # default
