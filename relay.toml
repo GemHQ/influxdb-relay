@@ -10,7 +10,8 @@ bind-addr = "0.0.0.0:8086"
 
 # Array of InfluxDB instances to use as backends for Relay.
 output = [
-    { name="local1", location="http://influxdb.dev.us-west-2:8086/write", timeout="10s" }
+    { name="influxdb-1", location="http://influxdb-1.dev.us-west-2:8086/write", timeout="10s" },
+    { name="influxdb-2", location="http://influxdb-2.dev.us-west-2:8086/write", timeout="10s" }
 ]
 
 [[udp]]
@@ -28,5 +29,6 @@ precision = "n" # Can be n, u, ms, s, m, h
 
 # Array of InfluxDB instances to use as backends for Relay.
 output = [
-    { name="local1", location="influxdb.dev.us-west-2:8089", mtu=512 }
+    { name="influxdb-1", location="influxdb-1.dev.us-west-2:8089", mtu=512 },
+    { name="influxdb-2", location="influxdb-2.dev.us-west-2:8089", mtu=512 }
 ]
