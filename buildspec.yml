@@ -19,11 +19,11 @@ phases:
     commands:
       - echo Build started on `date`
       - echo Building the Docker image...
-      - sed -i 's/http-output-1/'"$HTTP_OUTPUT_1"'/g' relay.toml
+      - sed -i 's/http-output-1/'"$(echo $HTTP_OUTPUT_1)"'/g' relay.toml
+      - cat relay.toml
       - sed -i 's/http-output-1/'"$HTTP_OUTPUT_2"'/g' relay.toml
       - sed -i 's/udp-output-1/'"$UDP_OUTPUT_1"'/g' relay.toml
       - sed -i 's/udp-output-1/'"$UDP_OUTPUT_2"'/g' relay.toml
-      - cat relay.toml
       - docker build -t $REPOSITORY_URL:latest .
       - docker tag $LATEST_IMAGE $VERSIONED_IMAGE
   post_build:
